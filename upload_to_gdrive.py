@@ -49,6 +49,14 @@ def main():
         sys.exit(2)
 
     sa_json_text = load_service_account_json_from_env(args.env)
+    
+    # Validate JSON format
+    try:
+        json.loads(sa_json_text)
+    except json.JSONDecodeError as e:
+        print(f"Invalid JSON in service account data: {e}", file=sys.stderr)
+        sys.exit(2)
+    
     # Save JSON to temp file
     with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
         f.write(sa_json_text)

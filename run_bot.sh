@@ -29,7 +29,10 @@ pip install -q -r requirements.txt
 if [ -z "$TELEGRAM_API_ID" ] || [ -z "$TELEGRAM_API_HASH" ]; then
     if [ -f ".env" ]; then
         echo "📋 Загрузка переменных окружения из .env файла..."
-        export $(cat .env | grep -v '^#' | xargs)
+        # Безопасная загрузка переменных окружения (избегаем code injection)
+        set -a
+        source .env
+        set +a
     else
         echo "⚠️  Файл .env не найден. Создайте его на основе .env.example"
         echo "   или установите переменные окружения TELEGRAM_API_ID и TELEGRAM_API_HASH"

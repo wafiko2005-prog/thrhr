@@ -17,7 +17,11 @@ API_HASH = os.environ.get('TELEGRAM_API_HASH')
 PHONE = os.environ.get('TELEGRAM_PHONE')
 SESSION_NAME = os.environ.get('SESSION_NAME', 'telegram_scanner')
 OUTPUT_FILE = os.environ.get('OUTPUT_FILE', 'results.csv')
-DAYS_BACK = int(os.environ.get('DAYS_BACK', '7'))
+try:
+    DAYS_BACK = int(os.environ.get('DAYS_BACK', '7'))
+except ValueError:
+    print("Warning: DAYS_BACK должен быть числом. Используется значение по умолчанию: 7", file=sys.stderr)
+    DAYS_BACK = 7
 
 async def scan_active_chats(client):
     """Сканирует активные чаты за последние N дней"""
@@ -81,7 +85,10 @@ async def main():
     
     print("Запуск Telegram бота для сканирования активных чатов...")
     print(f"API ID: {'*' * 8 if API_ID else 'Не установлен'}")
-    print(f"Телефон: {PHONE[:4] + '***' + PHONE[-4:] if PHONE and len(PHONE) > 8 else 'Не указан'}")
+    if PHONE and len(PHONE) > 8:
+        print(f"Телефон: {PHONE[:4]}***{PHONE[-4:]}")
+    else:
+        print(f"Телефон: {'***' if PHONE else 'Не указан'}")
     
     # Создаем клиента
     client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
