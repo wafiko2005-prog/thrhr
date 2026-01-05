@@ -1,76 +1,171 @@
-#!/usr/bin/env python3
-"""
-upload_to_gdrive.py
+# Telegram Active Chats Scanner Bot
 
-Загружает указанный файл (по умолчанию results.csv) в Google Drive используя
-Service Account JSON, переданный через переменную окружения GDRIVE_SERVICE_ACCOUNT_JSON.
+Бот для сканирования активных чатов в Telegram и сохранения результатов в CSV файл.
 
-Требуется:
-- Включить Drive API в Google Cloud Console.
-- Создать Service Account и скачать JSON. Добавить JSON в Secrets GitHub как GDRIVE_SERVICE_ACCOUNT_JSON.
-- (Опционально) укажите GDRIVE_FOLDER_ID — ID папки в Google Drive, куда загружать.
-  Убедитесь, что вы поделились этой папкой с email сервисного аккаунта (service-account@...).
-"""
-import os
-import json
-import argparse
-import tempfile
-import sys
+## Описание
 
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+Этот бот подключается к вашему аккаунту Telegram, сканирует все активные чаты (диалоги, группы, каналы) за указанный период времени и сохраняет информацию о них в CSV файл.
 
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
+## Функциональность
 
-def load_service_account_json_from_env(env_var='GDRIVE_SERVICE_ACCOUNT_JSON'):
-    data = os.environ.get(env_var)
-    if not data:
-        raise RuntimeError(f"Environment variable {env_var} is not set")
-    return data
+- ✅ Сканирование активных чатов за последние N дней
+- ✅ Определение типа чата (личный, группа, канал, супергруппа)
+- ✅ Сохранение результатов в CSV файл
+- ✅ Возможность загрузки результатов в Google Drive
 
-def upload_file(service, local_path, folder_id=None):
-    file_metadata = {'name': os.path.basename(local_path)}
-    if folder_id:
-        file_metadata['parents'] = [folder_id]
-    media = MediaFileUpload(local_path, mimetype='text/csv', resumable=True)
-    file = service.files().create(body=file_metadata, media_body=media, fields='id,webViewLink').execute()
-    return file
+## Требования
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--file', default='results.csv', help='Path to file to upload')
-    parser.add_argument('--env', default='GDRIVE_SERVICE_ACCOUNT_JSON', help='Env var with SA JSON')
-    parser.add_argument('--folder', default=None, help='Drive folder ID (optional)')
-    args = parser.parse_args()
+- Python 3.7+
+- Telegram API credentials (API_ID и API_HASH)
+- Номер телефона, привязанный к Telegram аккаунту
 
-    if not os.path.exists(args.file):
-        print(f"File not found: {args.file}", file=sys.stderr)
-        sys.exit(2)
+## Установка
 
-    sa_json_text = load_service_account_json_from_env(args.env)
-    # Save JSON to temp file
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
-        f.write(sa_json_text)
-        sa_path = f.name
+1. Клонируйте репозиторий:
+```bash
+git clone https://github.com/wafiko2005-prog/thrhr.git
+cd thrhr
+```
 
-    try:
-        credentials = service_account.Credentials.from_service_account_file(sa_path, scopes=SCOPES)
-        service = build('drive', 'v3', credentials=credentials, cache_discovery=False)
-        folder_id = args.folder or os.environ.get('GDRIVE_FOLDER_ID')
-        uploaded = upload_file(service, args.file, folder_id)
-        file_id = uploaded.get('id')
-        web_link = uploaded.get('webViewLink') or f"https://drive.google.com/file/d/{file_id}/view"
-        print(f"Uploaded file id: {file_id}")
-        print(f"File link: {web_link}")
-    except Exception as e:
-        print("Upload failed:", e, file=sys.stderr)
-        sys.exit(1)
-    finally:
-        try:
-            os.remove(sa_path)
-        except Exception:
-            pass
+2. Установите зависимости:
+```bash
+pip install -r requirements.txt
+```
 
-if __name__ == '__main__':
-    main()
+3. Получите API credentials:
+   - Перейдите на https://my.telegram.org
+   - Войдите с помощью вашего номера телефона
+   - Перейдите в "API development tools"
+   - Создайте новое приложение и получите `api_id` и `api_hash`
+
+## Настройка
+
+Создайте файл `.env` в корне проекта со следующими переменными:
+
+```bash
+# Обязательные параметры
+TELEGRAM_API_ID=your_api_id
+TELEGRAM_API_HASH=your_api_hash
+TELEGRAM_PHONE=+1234567890
+
+# Опциональные параметры
+SESSION_NAME=telegram_scanner
+OUTPUT_FILE=results.csv
+DAYS_BACK=7
+```
+
+Или экспортируйте переменные окружения:
+
+```bash
+export TELEGRAM_API_ID=your_api_id
+export TELEGRAM_API_HASH=your_api_hash
+export TELEGRAM_PHONE=+1234567890
+```
+
+## Запуск бота
+
+```bash
+python bot.py
+```
+
+При первом запуске бот попросит вас ввести код подтверждения, который придет в Telegram.
+
+## Параметры
+
+- `TELEGRAM_API_ID` - API ID из my.telegram.org (обязательно)
+- `TELEGRAM_API_HASH` - API Hash из my.telegram.org (обязательно)
+- `TELEGRAM_PHONE` - Номер телефона в международном формате (опционально, для первой авторизации)
+- `SESSION_NAME` - Имя файла сессии (по умолчанию: telegram_scanner)
+- `OUTPUT_FILE` - Имя выходного CSV файла (по умолчанию: results.csv)
+- `DAYS_BACK` - Количество дней назад для поиска активных чатов (по умолчанию: 7)
+
+## Формат выходного файла
+
+CSV файл содержит следующие колонки:
+
+- `chat_id` - ID чата
+- `chat_name` - Название чата
+- `chat_type` - Тип чата (user, group, channel, supergroup)
+- `last_message_date` - Дата последнего сообщения
+- `unread_count` - Количество непрочитанных сообщений
+
+## Загрузка результатов в Google Drive
+
+После сканирования вы можете загрузить результаты в Google Drive:
+
+```bash
+python upload_to_gdrive.py --file results.csv
+```
+
+Для этого необходимо:
+1. Настроить Service Account в Google Cloud Console
+2. Установить переменную окружения `GDRIVE_SERVICE_ACCOUNT_JSON` с JSON ключом
+3. (Опционально) Установить `GDRIVE_FOLDER_ID` с ID папки в Google Drive
+
+Подробнее см. комментарии в файле `upload_to_gdrive.py`.
+
+## Примеры использования
+
+### Базовое использование
+
+```bash
+export TELEGRAM_API_ID=12345678
+export TELEGRAM_API_HASH=abcdef1234567890
+python bot.py
+```
+
+### Сканирование за последние 30 дней
+
+```bash
+export DAYS_BACK=30
+python bot.py
+```
+
+### Полный workflow с загрузкой в Google Drive
+
+```bash
+# 1. Сканируем чаты
+python bot.py
+
+# 2. Загружаем результаты в Google Drive
+python upload_to_gdrive.py --file results.csv
+```
+
+## Безопасность
+
+⚠️ **Важно:**
+- Никогда не коммитьте файлы `.env` или `.session` в репозиторий
+- Храните API credentials в безопасном месте
+- Используйте переменные окружения для CI/CD
+- Файлы сессий содержат токены доступа - храните их в безопасности
+
+## Структура проекта
+
+```
+thrhr/
+├── bot.py                  # Основной скрипт бота
+├── upload_to_gdrive.py    # Скрипт для загрузки в Google Drive
+├── requirements.txt       # Python зависимости
+├── .gitignore            # Файлы для игнорирования git
+├── .env.example          # Пример файла конфигурации
+└── README.md             # Документация
+```
+
+## Troubleshooting
+
+### Ошибка "Could not find the input entity"
+Убедитесь, что у вас есть доступ к чатам, которые вы пытаетесь сканировать.
+
+### Ошибка авторизации
+Убедитесь, что правильно ввели код подтверждения из Telegram.
+
+### Ошибка API
+Проверьте, что API_ID и API_HASH правильные и активны.
+
+## Лицензия
+
+MIT
+
+## Автор
+
+wafiko2005-prog
