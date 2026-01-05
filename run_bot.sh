@@ -45,7 +45,7 @@ echo ""
 echo "✅ Бот завершил работу"
 
 # Опциональная загрузка в Google Drive
-if [ -n "$GDRIVE_SERVICE_ACCOUNT_JSON" ] && [ -f "$OUTPUT_FILE" ]; then
+if [ -n "$GDRIVE_SERVICE_ACCOUNT_JSON" ] && [ -f "${OUTPUT_FILE:-results.csv}" ]; then
     echo ""
     read -p "📤 Загрузить результаты в Google Drive? (y/n) " -n 1 -r
     echo

@@ -80,8 +80,8 @@ async def main():
         sys.exit(1)
     
     print("Запуск Telegram бота для сканирования активных чатов...")
-    print(f"API ID: {API_ID}")
-    print(f"Телефон: {PHONE or 'Не указан'}")
+    print(f"API ID: {'*' * 8 if API_ID else 'Не установлен'}")
+    print(f"Телефон: {PHONE[:4] + '***' + PHONE[-4:] if PHONE and len(PHONE) > 8 else 'Не указан'}")
     
     # Создаем клиента
     client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
